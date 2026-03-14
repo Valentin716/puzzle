@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resolución de Nodos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1b26; /* Fondo oscuro elegante */
+            color: #a9b1d6;
+            text-align: center;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { 
+            color: #7aa2f7; 
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        .datos {
+            background-color: #24283b;
+            padding: 25px 50px;
+            border-radius: 12px;
+            font-size: 1.25em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            margin-bottom: 35px;
+            border: 1px solid #414868;
+            min-width: 300px;
+        }
+        .datos p { margin: 12px 0; }
+        .datos strong { color: #c0caf5; }
+        
+        button {
+            background-color: #bb9af7;
+            color: #1a1b26;
+            border: none;
+            padding: 16px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(187, 154, 247, 0.2);
+        }
+        button:hover { 
+            background-color: #9d7cd8; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(187, 154, 247, 0.4);
+        }
+        /* Estilo cuando el botón está desactivado durante la carga */
+        button:disabled {
+            background-color: #414868;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Contenedor invisible para organizar las tarjetas animadas */
+        #contenedor-pasos {
+            margin-top: 40px;
+            width: 100%;
+            max-width: 750px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Espacio entre cada tarjeta */
+        }
+
+        /* DISEÑO DE LA TARJETA INDIVIDUAL */
+        .paso-caja {
+            background-color: #16161e;
+            color: #7dcfff; 
+            padding: 25px 30px;
+            border-radius: 10px;
+            border: 1px solid #414868;
+            border-left: 5px solid #7aa2f7; 
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.15em;
+            text-align: left;
+            
+            /* Animación y transición */
+            opacity: 0; 
+            transform: translateY(20px); 
+            animation: deslizarAparecer 0.5s ease forwards;
+            transition: all 0.3s ease;
+        }
+
+        /* EFECTO DE SOMBRA AL PASAR EL CURSOR (HOVER) */
+        .paso-caja:hover {
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6); 
+            background-color: #202330; 
+        }
+
+        /* Variación para líneas de texto plano */
+        .paso-texto {
+            border-left-color: #bb9af7; 
+            color: #bb9af7;
+            font-weight: bold;
+        }
+
+        @keyframes deslizarAparecer {
+            to {
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧩 Resolución de Nodos</h1>
+    
+    <div class="datos">
+        <p><strong>Estado inicial:</strong> [4, 2, 3, 1]</p>
+    </div>
+
+    <button id="btn-ejecutar" onclick="ejecutarAlgoritmo()">Buscar Solución BFS</button>
+
+    <div id="contenedor-pasos"></div>
+
+    <script>
+        async function ejecutarAlgoritmo() {
+            const contenedor = document.getElementById('contenedor-pasos');
+            const boton = document.getElementById('btn-ejecutar');
+            
+            contenedor.innerHTML = '';
+            boton.disabled = true;
+            boton.innerText = "Calculando ruta...";
+
+            try {
+                const respuesta = await fetch('/resolver');
+                const resultadoTexto = await respuesta.text();
+                
+                const lineas = resultadoTexto.split('\n').filter(linea => linea.trim() !== '');
+                
+                lineas.forEach((linea, indice) => {
+                    const caja = document.createElement('div');
+                    caja.className = 'paso-caja';
+                    
+                    if (!linea.toLowerCase().includes("paso")) {
+                        caja.classList.add('paso-texto');
+                    }
+                    
+                    caja.innerText = linea;
+                    caja.style.animationDelay = `${indice * 0.2}s`;
+                    contenedor.appendChild(caja);
+                });
+
+            } catch (error) {
+                const errorCaja = document.createElement('div');
+                errorCaja.className = 'paso-caja paso-texto';
+                errorCaja.style.borderLeftColor = '#f7768e';
+                errorCaja.style.color = '#f7768e';
+                errorCaja.innerText = "Error crítico: No se pudo conectar con el servidor interno de Python (app.py).";
+                contenedor.appendChild(errorCaja);
+            } finally {
+                boton.disabled = false;
+                boton.innerText = "Buscar Solución BFS";
+            }
+        }
+    </script>
+</body>
+</html>
