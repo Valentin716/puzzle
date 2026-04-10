@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Resolutor de Puzzle Lineal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e2e; color: #cdd6f4; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 40px 0; }
+        .container { background-color: #313244; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 500px; text-align: center; }
+        input { background-color: #181825; border: 1px solid #45475a; color: #a6e3a1; padding: 10px; border-radius: 6px; width: 80%; margin-bottom: 15px; font-size: 16px; text-align: center; letter-spacing: 2px;}
+        button { background-color: #89b4fa; color: #11111b; border: none; padding: 12px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 85%; font-size: 16px; transition: 0.3s; margin-bottom: 20px;}
+        button:hover { background-color: #b4befe; }
+        #resultado { text-align: left; background-color: #181825; padding: 15px; border-radius: 6px; display: none; max-height: 500px; overflow-y: auto; }
+        .solucion-box { background-color: #11111b; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #89b4fa; }
+        .solucion-box h4 { margin: 0 0 10px 0; color: #89b4fa; }
+        .paso { font-family: monospace; color: #f9e2af; font-size: 16px; margin: 3px 0; }
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #181825; }
+        ::-webkit-scrollbar-thumb { background: #45475a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #585b70; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧩 AI Puzzle Solver (Multiruta)</h2>
+    <p>Ingresa los números separados por comas:</p>
+    
+    <label>Estado Inicial:</label>
+    <input type="text" id="inicio" value="4,2,3,1">
+    
+    <label>Estado Final (Solución):</label>
+    <input type="text" id="fin" value="1,2,3,4">
+    
+    <button onclick="resolverPuzzle()">Buscar Múltiples Rutas</button>
+
+    <div id="resultado"></div>
+</div>
+
+<script>
+    async function resolverPuzzle() {
+        const inicioText = document.getElementById('inicio').value;
+        const finText = document.getElementById('fin').value;
+        
+        const estado_inicial = inicioText.split(',').map(num => parseInt(num.trim()));
+        const solucion = finText.split(',').map(num => parseInt(num.trim()));
+        const cajaResultado = document.getElementById('resultado');
+
+        cajaResultado.style.display = 'block';
+        cajaResultado.innerHTML = '<p style="color:#f9e2af; text-align:center;">⏳ Buscando rutas...</p>';
+
+        try {
+            const respuesta = await fetch('http://127.0.0.1:8000/resolver', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado_inicial, solucion })
+            });
+
+            const datos = await respuesta.json();
+
+            if (respuesta.ok) {
+                let html = `<h3 style="color:#a6e3a1; text-align:center;">✅ ¡Se encontraron ${datos.cantidad_soluciones} rutas!</h3>`;
+                
+                // Recorrer cada una de las 12 soluciones y crear una caja para ellas
+                datos.soluciones.forEach((ruta, index) => {
+                    html += `<div class="solucion-box">`;
+                    html += `<h4>Ruta ${index + 1} (${ruta.length - 1} pasos)</h4>`;
+                    
+                    ruta.forEach((paso, pasoIndex) => {
+                        html += `<div class="paso">Paso ${pasoIndex}: [${paso.join(', ')}]</div>`;
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                cajaResultado.innerHTML = html;
+            } else {
+                cajaResultado.innerHTML = `<p style="color:#f38ba8; text-align:center;">❌ Error: ${datos.detail}</p>`;
+            }
+
+        } catch (error) {
+            cajaResultado.innerHTML = `<p style="color:#f38ba8; text-align:center;">❌ Error de conexión. Revisa que el servidor Uvicorn esté encendido.</p>`;
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -2,17 +2,76 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Resolutor de Puzzle Lineal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Lineal - Búsqueda DFS</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e2e; color: #cdd6f4; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 40px 0; }
-        .container { background-color: #313244; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 500px; text-align: center; }
-        input { background-color: #181825; border: 1px solid #45475a; color: #a6e3a1; padding: 10px; border-radius: 6px; width: 80%; margin-bottom: 15px; font-size: 16px; text-align: center; letter-spacing: 2px;}
-        button { background-color: #89b4fa; color: #11111b; border: none; padding: 12px 20px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 85%; font-size: 16px; transition: 0.3s; margin-bottom: 20px;}
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #1e1e2e; 
+            color: #cdd6f4; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding-top: 50px; 
+        }
+        .container { 
+            background-color: #313244; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            width: 450px; 
+            text-align: center; 
+        }
+        h2 { color: #89b4fa; margin-top: 0; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 5px; color: #bac2de; font-size: 14px;}
+        input { 
+            background-color: #181825; 
+            border: 1px solid #45475a; 
+            color: #a6e3a1; 
+            padding: 12px; 
+            border-radius: 6px; 
+            width: calc(100% - 26px); /* Ajuste de padding */
+            font-size: 16px; 
+            text-align: center; 
+            letter-spacing: 2px;
+        }
+        button { 
+            background-color: #cba6f7; 
+            color: #11111b; 
+            border: none; 
+            padding: 14px 20px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            width: 100%; 
+            font-size: 16px; 
+            transition: 0.3s; 
+        }
         button:hover { background-color: #b4befe; }
-        #resultado { text-align: left; background-color: #181825; padding: 15px; border-radius: 6px; display: none; max-height: 500px; overflow-y: auto; }
-        .solucion-box { background-color: #11111b; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #89b4fa; }
-        .solucion-box h4 { margin: 0 0 10px 0; color: #89b4fa; }
-        .paso { font-family: monospace; color: #f9e2af; font-size: 16px; margin: 3px 0; }
+        
+        #resultado { 
+            margin-top: 25px; 
+            text-align: left; 
+            background-color: #181825; 
+            padding: 15px; 
+            border-radius: 6px; 
+            display: none; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            border-left: 5px solid #cba6f7;
+        }
+        .paso { 
+            font-family: monospace; 
+            color: #f9e2af; 
+            font-size: 16px; 
+            margin: 8px 0; 
+            padding: 5px;
+            background-color: #1e1e2e;
+            border-radius: 4px;
+        }
         /* Scrollbar personalizado */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #181825; }
@@ -23,22 +82,27 @@
 <body>
 
 <div class="container">
-    <h2>🧩 AI Puzzle Solver (Multiruta)</h2>
+    <h2>🧩 Explorador DFS - Puzzle Lineal</h2>
     <p>Ingresa los números separados por comas:</p>
     
-    <label>Estado Inicial:</label>
-    <input type="text" id="inicio" value="4,2,3,1">
+    <div class="input-group">
+        <label>Estado Inicial:</label>
+        <input type="text" id="inicio" value="4, 2, 3, 1">
+    </div>
     
-    <label>Estado Final (Solución):</label>
-    <input type="text" id="fin" value="1,2,3,4">
+    <div class="input-group">
+        <label>Estado Objetivo (Solución):</label>
+        <input type="text" id="fin" value="1, 2, 3, 4">
+    </div>
     
-    <button onclick="resolverPuzzle()">Buscar Múltiples Rutas</button>
+    <button onclick="ejecutarDFS()">Buscar Solución con DFS</button>
 
     <div id="resultado"></div>
 </div>
 
 <script>
-    async function resolverPuzzle() {
+    async function ejecutarDFS() {
+        // 1. Obtener valores y limpiar los espacios
         const inicioText = document.getElementById('inicio').value;
         const finText = document.getElementById('fin').value;
         
@@ -46,10 +110,12 @@
         const solucion = finText.split(',').map(num => parseInt(num.trim()));
         const cajaResultado = document.getElementById('resultado');
 
+        // Mostrar estado de carga
         cajaResultado.style.display = 'block';
-        cajaResultado.innerHTML = '<p style="color:#f9e2af; text-align:center;">⏳ Buscando rutas...</p>';
+        cajaResultado.innerHTML = '<p style="color:#f9e2af; text-align:center;">⏳ Explorando en profundidad...</p>';
 
         try {
+            // 2. Hacer la petición al backend de FastAPI (asegúrate de que esté corriendo en el puerto 8000)
             const respuesta = await fetch('http://127.0.0.1:8000/resolver', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -58,19 +124,15 @@
 
             const datos = await respuesta.json();
 
+            // 3. Procesar la respuesta
             if (respuesta.ok) {
-                let html = `<h3 style="color:#a6e3a1; text-align:center;">✅ ¡Se encontraron ${datos.cantidad_soluciones} rutas!</h3>`;
+                // Si la API devuelve "mejor_ruta" (adaptado al formato de tu código anterior)
+                let ruta = datos.mejor_ruta || datos.ruta; // Ajusta esto según el nombre exacto de la clave que devuelva tu return en FastAPI
                 
-                // Recorrer cada una de las 12 soluciones y crear una caja para ellas
-                datos.soluciones.forEach((ruta, index) => {
-                    html += `<div class="solucion-box">`;
-                    html += `<h4>Ruta ${index + 1} (${ruta.length - 1} pasos)</h4>`;
-                    
-                    ruta.forEach((paso, pasoIndex) => {
-                        html += `<div class="paso">Paso ${pasoIndex}: [${paso.join(', ')}]</div>`;
-                    });
-                    
-                    html += `</div>`;
+                let html = `<h4 style="color:#a6e3a1; margin-top:0;">✅ ¡Solución encontrada en ${ruta.length - 1} pasos!</h4>`;
+                
+                ruta.forEach((estado, index) => {
+                    html += `<div class="paso"><strong>Paso ${index}:</strong> [${estado.join(', ')}]</div>`;
                 });
                 
                 cajaResultado.innerHTML = html;
@@ -79,7 +141,8 @@
             }
 
         } catch (error) {
-            cajaResultado.innerHTML = `<p style="color:#f38ba8; text-align:center;">❌ Error de conexión. Revisa que el servidor Uvicorn esté encendido.</p>`;
+            console.error("Error de conexión:", error);
+            cajaResultado.innerHTML = `<p style="color:#f38ba8; text-align:center;">❌ Error de conexión. ¿Está encendido el servidor Uvicorn?</p>`;
         }
     }
 </script>

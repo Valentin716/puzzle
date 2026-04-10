@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse # <-- IMPORTANTE
 from pydantic import BaseModel
 from typing import List
-from collections import deque
 
-# --- 1. CONFIGURACIÓN INICIAL ---
-app = FastAPI()
+# --- 1. CONFIGURACIÓN DE FASTAPI ---
+app = FastAPI(title="API Puzzle DFS")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,66 +23,77 @@ class Nodo:
     def __init__(self, datos, padre=None):
         self.datos = datos
         self.padre = padre
-    def get_datos(self): return self.datos
-    def get_padre(self): return self.padre
-
-# --- 3. LÓGICA DE BÚSQUEDA (MULTIPLE) ---
-def buscar_varias_soluciones(estado_inicial, solucion_esperada, cantidad=12):
-    nodos_frontera = deque([Nodo(estado_inicial)])
-    soluciones_encontradas = []
-    # Para encontrar 12 rutas distintas, limitamos la profundidad para no entrar en bucles infinitos
-    max_profundidad = 15 
-
-    while len(nodos_frontera) > 0 and len(soluciones_encontradas) < cantidad:
-        nodo = nodos_frontera.popleft()
+        self.hijos = []
         
-        # Calcular profundidad actual
-        profundidad = 0
-        p = nodo.get_padre()
-        while p:
-            profundidad += 1
-            p = p.get_padre()
+    def get_datos(self): 
+        return self.datos
         
-        if profundidad > max_profundidad: continue
+    def set_hijos(self, hijo_izq, hijo_cen, hijo_der): 
+        hijo_izq.padre = self
+        hijo_cen.padre = self
+        hijo_der.padre = self
+        self.hijos = [hijo_izq, hijo_cen, hijo_der]
+        
+    def get_hijos(self): 
+        return self.hijos
+        
+    def get_padre(self): 
+        return self.padre
 
-        if nodo.get_datos() == solucion_esperada:
-            ruta = []
-            temp = nodo
-            while temp:
-                ruta.append(temp.get_datos())
-                temp = temp.get_padre()
-            ruta.reverse()
-            # Evitamos duplicados exactos de rutas
-            if ruta not in soluciones_encontradas:
-                soluciones_encontradas.append(ruta)
-            continue
+# --- 3. ALGORITMO DFS ---
+def buscar_solucion_DFS_rec(nodo_inicial, solucion, visitados):
+    visitados.append(nodo_inicial.get_datos())
+    
+    if nodo_inicial.get_datos() == solucion: 
+        return nodo_inicial
+    else:
+        dato_nodo = nodo_inicial.get_datos()
+        
+        hijo = list(dato_nodo)
+        hijo[0], hijo[1] = hijo[1], hijo[0]
+        hijo_izquierdo = Nodo(tuple(hijo))
+        
+        hijo = list(dato_nodo)
+        hijo[1], hijo[2] = hijo[2], hijo[1]
+        hijo_central = Nodo(tuple(hijo))
+        
+        hijo = list(dato_nodo)
+        hijo[2], hijo[3] = hijo[3], hijo[2]
+        hijo_derecho = Nodo(tuple(hijo))
+        
+        nodo_inicial.set_hijos(hijo_izquierdo, hijo_central, hijo_derecho)
 
-        dato = nodo.get_datos()
-        # Operadores
-        movimientos = [
-            [dato[1], dato[0], dato[2], dato[3]], # Central
-            [dato[0], dato[2], dato[1], dato[3]], # Izquierdo
-            [dato[0], dato[1], dato[3], dato[2]]  # Derecho
-        ]
+    for nodo_hijo in nodo_inicial.get_hijos():
+        if not nodo_hijo.get_datos() in visitados:
+            sol = buscar_solucion_DFS_rec(nodo_hijo, solucion, visitados)
+            if sol is not None:
+                return sol
+    return None
 
-        for m in movimientos:
-            # Para hallar MUCHAS rutas, permitimos volver a estados anteriores
-            # siempre que no sea el padre inmediato (evitar rebote simple)
-            if nodo.get_padre() and m == nodo.get_padre().get_datos():
-                continue
-            nodos_frontera.append(Nodo(m, padre=nodo))
-            
-    return soluciones_encontradas
+# --- 4. RUTA PARA MOSTRAR TU PÁGINA WEB ---
+@app.get("/")
+def mostrar_pagina_web():
+    # Esto buscará tu archivo HTML y lo mostrará en el navegador
+    return FileResponse("index.html")
 
-# --- 4. ENDPOINT ---
+# --- 5. RUTA PARA CALCULAR LA SOLUCIÓN ---
 @app.post("/resolver")
 def resolver_puzzle(request: PuzzleRequest):
-    resultados = buscar_varias_soluciones(request.estado_inicial, request.solucion, 12)
+    visitados = []
+    nodo_inicial = Nodo(tuple(request.estado_inicial))
+    solucion_tupla = tuple(request.solucion)
     
-    if not resultados:
-        raise HTTPException(status_code=404, detail="No se encontraron rutas")
+    nodo_solucion = buscar_solucion_DFS_rec(nodo_inicial, solucion_tupla, visitados)
+    
+    if not nodo_solucion:
+        raise HTTPException(status_code=404, detail="No se encontró una ruta")
 
-    return {
-        "cantidad_soluciones": len(resultados),
-        "soluciones": resultados
-    }
+    resultado = []
+    nodo_actual = nodo_solucion
+    while nodo_actual is not None:
+        resultado.append(list(nodo_actual.get_datos()))
+        nodo_actual = nodo_actual.get_padre()
+        
+    resultado.reverse()
+
+    return {"mejor_ruta": resultado}
